@@ -34,19 +34,15 @@ function getProductId() {
     return Number(document.getElementById('product-id-input').value);
 }
 
-function getTokenExpirationTime() {
-    return document.getElementById('token-exp-time-input').value || 2;
-}
-
 function getStorefrontJwtToken() {
     return document.getElementById('bc-storefront-jwt').value;
 }
 
 /**
-*
-* API generation requests
-*
-*/
+ *
+ * API generation requests
+ *
+ */
 async function getStorefrontApiToken() {
     const storeHash = getStoreHash();
     const xAuthToken = getXAuthToken();
@@ -64,49 +60,25 @@ async function getStorefrontApiToken() {
             Accept: 'application/json',
             'Content-Type': 'application/json',
             'X-Auth-Token': xAuthToken,
+            'Access-Control-Allow-Origin': 'https://bc-nick.github.io/',
         },
         body: JSON.stringify({
             allowed_cors_origins: getAllowedCorsOrigins(),
             channel_id: getChannelId(),
-            expires_at: (Date.now() + getTokenExpirationTime() * 1000) / 1000,
+            expires_at: 1885635176 // 5 years,
         }),
-        mode: 'no-cors',
+        // mode: 'no-cors',
     };
 
     const response = await fetch(url, options);
+
+    if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+    }
+
     const { data } = await response.json();
 
     return data.token;
-}
-
-async function createCart(productId) {
-    const bcStoreUrl = getBcStoreUrl();
-    const url = `${bcStoreUrl}/api/storefront/carts`;
-
-    try {
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                lineItems: [{
-                    quantity: 1,
-                    productId,
-                }],
-            }),
-            mode: 'no-cors',
-        });
-
-        const { data } = await response.json();
-
-        console.log({ cartCreationRequestData: data });
-    } catch(error) {
-        console.error(error);
-
-        return {};
-    }
 }
 
 async function createCartWithStorefrontAPI(productId) {
@@ -140,7 +112,7 @@ async function createCartWithStorefrontAPI(productId) {
             },
             locale: 'en-US',
         }),
-        mode: 'no-cors',
+        // mode: 'no-cors',
     };
 
     try {
@@ -148,6 +120,8 @@ async function createCartWithStorefrontAPI(productId) {
         const { data } = await response.json();
 
         console.log({ cartCreationV2RequestData: data });
+
+        return data;
     } catch(error) {
         console.error(error);
 
@@ -157,7 +131,7 @@ async function createCartWithStorefrontAPI(productId) {
 
 async function createCartWithGraphQL(productId) {
     const bcStoreUrl = getBcStoreUrl();
-    const storefrontApiToken = getStorefrontApiToken();
+    const storefrontApiToken = await getStorefrontApiToken();
 
     const graphQLUrl = `${bcStoreUrl}/graphql`;
     const graphQLMutation = `
@@ -182,12 +156,14 @@ async function createCartWithGraphQL(productId) {
             body: JSON.stringify({
                 query: graphQLMutation,
             }),
-            mode: 'no-cors',
+            // mode: 'no-cors',
         });
 
         const { data } = await response.json();
 
         console.log({ cartCreationRequestData: data });
+
+        return data;
     } catch(error) {
         console.error(error);
 
@@ -197,17 +173,18 @@ async function createCartWithGraphQL(productId) {
 
 async function fetchPaymentWalletButtons() {
     const bcStoreUrl = getBcStoreUrl();
-    const storefrontApiToken = getStorefrontApiToken();
+    const storefrontApiToken = await getStorefrontApiToken();
+
     const billingAddressCountry = "US";
 
     const graphQLUrl = `${bcStoreUrl}/graphql`;
     const graphQLQuery = `
         query {
             site {
-                paymentWallets(billingCountry: "${billingAddressCountry}") {
+                paymentWallets(filter: {cartEntityId: "${getCartEntity?.id}", billingCountryCode: "${billingAddressCountry}"}) {
                     edges {
                         node {
-                            paymentMethodId
+                            entityId
                         }
                     }
                 }
@@ -225,20 +202,64 @@ async function fetchPaymentWalletButtons() {
             body: JSON.stringify({
                 query: graphQLQuery,
             }),
-            mode: 'no-cors',
+            // mode: 'no-cors',
         });
 
         const { data } = await response.json();
 
         const paymentMethodsList = data?.site?.paymentWallets?.edges?.map(paymentWalletEdge => {
-            return paymentWalletEdge?.node?.paymentMethodId;
+            return paymentWalletEdge?.node?.entityId;
         });
 
         console.log({ paymentMethodsList, data });
+
+        return paymentMethodsList;
     } catch(error) {
         console.error(error);
 
         return {};
+    }
+}
+
+async function fetchPaymentWalletWithInitializationData(entityList) {
+    const storefrontApiToken = getStorefrontApiToken();
+
+    const graphQLQuery = (entityId) => {
+        return `
+            query {
+                site {
+                    paymentWalletWithInitializationData(filter: {paymentWalletEntityId: "${entityId}"}) {
+                        clientToken
+                        initializationData
+                    }
+                }
+            }
+        `
+    };
+    const graphQLUrl = `${bcStoreUrl}/graphql`;
+
+    try {
+        const response = await Promise.all(entityList.map(async entityId => await fetch(graphQLUrl, {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${storefrontApiToken}`,
+            },
+            body: JSON.stringify({
+                query: graphQLQuery(entityId),
+            }),
+            // mode: 'no-cors',
+        })));
+
+        const { data } = await response.json();
+
+        console.log({ walletWithInitializationData: data });
+
+        return data?.map(({ paymentWalletWithInitializationData }, index    ) => (
+            { [entityList[index]]: paymentWalletWithInitializationData }
+        ));
+    } catch (error) {
+        console.error(error);
     }
 }
 
@@ -251,7 +272,7 @@ function getWalletButtonsOption(paymentMethodId) {
     switch (paymentMethodId) {
         case 'paypalcommerce.paypal': {
             return {
-                paymentMethodId: 'paypalcommerce.paypal',
+                paymentMethodId: paymentMethodId,
                 containerId: 'paypalcommerce-button',
                 options: {
                     style: { "color":"gold", "label":"checkout" },
@@ -260,7 +281,7 @@ function getWalletButtonsOption(paymentMethodId) {
         }
         case 'braintree.paypal': {
             return {
-                paymentMethodId: 'braintree.paypal',
+                paymentMethodId: paymentMethodId,
                 containerId: 'braintree-paypal-button',
                 options: {
                     style: { "color":"gold", "label":"checkout" },
@@ -298,9 +319,27 @@ async function onRenderWalletButtonsButtonClick(paymentMethodsList) {
     }
 
     const mockedPaymentWalletsList = paymentMethodsList || ['paypalcommerce.paypal'];
+    let paymentWalletsList;
+    let cartEntity;
 
-    const paymentWalletsList = isMockEnabled ? mockedPaymentWalletsList : await fetchPaymentWalletButtons();
-    const walletButtonsOptions = paymentWalletsList.map(getWalletButtonsOption);
+    if (isMockEnabled) {
+        paymentWalletsList = mockedPaymentWalletsList;
+    } else {
+        cartEntity = await onCreateCartClick('gql');
+        paymentWalletsList = await fetchPaymentWalletButtons(cartEntity?.id);
+    }
+
+    // const paymentWalletWithInitializationData = await fetchPaymentWalletWithInitializationData(paymentWalletsList);
+    const walletButtonsOptions = paymentWalletsList.map((paymentMethodId) => {
+        const walletButtonsOption = getWalletButtonsOption(paymentMethodId);
+
+        return {
+            ...walletButtonsOption,
+            options: {
+                ...walletButtonsOption.options,
+            }
+        }
+    });
 
     generateWalletButtonsContainers(walletButtonsOptions.map(({containerId}) => containerId));
 
@@ -319,10 +358,6 @@ async function onCreateCartClick(version) {
         console.error('Can\'t create cart because product id is not provided');
 
         return;
-    }
-
-    if (version === 'v1') {
-        await createCart(productId);
     }
 
     if (version === 'v2') {
@@ -351,9 +386,6 @@ braintreeButton.addEventListener('click', () => {
 
 const mockCheckbox = document.getElementById('mock-checkbox');
 mockCheckbox.addEventListener('change', onMockCheckboxChange);
-
-const cartCreationButton = document.getElementById('cart-creation-button');
-cartCreationButton.addEventListener('click', () => onCreateCartClick('v1'));
 
 const cartCreationStorefrontButton = document.getElementById('cart-creation-button-storefront');
 cartCreationStorefrontButton.addEventListener('click', () => onCreateCartClick('v2'));
