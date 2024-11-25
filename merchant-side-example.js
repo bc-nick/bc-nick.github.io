@@ -72,14 +72,14 @@ async function fetchPaymentWalletButtons(cartId) {
     const bcStoreUrl = getBcStoreUrl();
     const storefrontApiToken = await getStorefrontJwtToken();
 
-    const billingAddressCountry = "US";
+    // const billingAddressCountry = "US";
 
     const graphQLUrl = `${bcStoreUrl}/graphql`;
 
     const graphQLQuery = `
         query {
             site {
-                paymentWallets(filter: {cartEntityId: "${cartId}", billingCountryCode: "${billingAddressCountry}"}) {
+                paymentWallets(filter: {cartEntityId: "${cartId}"}) {
                     edges {
                         node {
                             entityId
@@ -96,7 +96,6 @@ async function fetchPaymentWalletButtons(cartId) {
             headers: {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${storefrontApiToken}`,
-                'X-Bc-Customer-Id': 0,
             },
             body: JSON.stringify({
                 query: graphQLQuery,
