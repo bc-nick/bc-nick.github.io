@@ -43,23 +43,19 @@ async function createCartWithGraphQL(productId) {
     `;
 
     try {
-        const response = await fetch(graphQLUrl, {
-            method: "POST",
+        const { data } = await window.axios.post(graphQLUrl, {
+            query: graphQLMutation,
+        }, {
             headers: {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${storefrontApiToken}`,
             },
-            body: JSON.stringify({
-                query: graphQLMutation,
-            }),
-            // mode: 'no-cors',
+            withCredentials: true
         });
-
-        const { data } = await response.json();
 
         console.log({ cartCreationRequestData: data });
 
-        return data.cart.createCart.cart;
+        return data.data.cart.createCart.cart;
     } catch(error) {
         console.error(error);
 
@@ -69,17 +65,18 @@ async function createCartWithGraphQL(productId) {
 
 
 async function fetchPaymentWalletButtons(cartId) {
+    let paymentMethodsList;
     const bcStoreUrl = getBcStoreUrl();
     const storefrontApiToken = await getStorefrontJwtToken();
 
-    // const billingAddressCountry = "US";
+    const billingAddressCountry = "US";
 
     const graphQLUrl = `${bcStoreUrl}/graphql`;
 
     const graphQLQuery = `
         query {
             site {
-                paymentWallets(filter: {cartEntityId: "${cartId}"}) {
+                paymentWallets(filter: {cartEntityId: "${cartId}", billingCountryCode: "${billingAddressCountry}"}) {
                     edges {
                         node {
                             entityId
@@ -91,21 +88,17 @@ async function fetchPaymentWalletButtons(cartId) {
     `;
 
     try {
-        const response = await fetch(graphQLUrl, {
-            method: "POST",
+        const { data } = await window.axios.post(graphQLUrl, {
+            query: graphQLQuery,
+        }, {
             headers: {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${storefrontApiToken}`,
             },
-            body: JSON.stringify({
-                query: graphQLQuery,
-            }),
-            // mode: 'no-cors',
+            withCredentials: true
         });
 
-        const { data } = await response.json();
-
-        const paymentMethodsList = data?.site?.paymentWallets?.edges?.map(paymentWalletEdge => {
+        const paymentMethodsList = data.data?.site?.paymentWallets?.edges?.map(paymentWalletEdge => {
             return paymentWalletEdge?.node?.entityId;
         });
 

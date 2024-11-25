@@ -1,9 +1,9 @@
 {
   "version": "1.684.0",
   "js": [
-    "v1/checkout-sdk-d0b712af.js",
-    "v1/checkout-button-b4b2bd2d.js",
-    "v1/checkout-headless-button-a3399c3b.js",
+    "v1/checkout-sdk-c26f1e67.js",
+    "v1/checkout-button-ef0ec24c.js",
+    "v1/checkout-headless-button-76afd93d.js",
     "v1/embedded-checkout-9d4d8458.js",
     "v1/extension-7fcaebab.js",
     "v1/hosted-form-bc3fca59.js",
