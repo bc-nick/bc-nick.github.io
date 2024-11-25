@@ -25,9 +25,9 @@ async function getCheckoutKitLoader(env) {
 }
 
 async function initCheckoutButtonInitializer(bcStoreHost, storefrontJwtToken) {
-    const checkoutButtonModule = await window.checkoutKitLoader.load('checkout-button');
+    const checkoutButtonModule = await window.checkoutKitLoader.load('checkout-headless-button');
 
-    window.checkoutButtonInitializer = checkoutButtonModule.createCheckoutButtonInitializer({ host: bcStoreHost, storefrontJwtToken });
+    window.checkoutButtonInitializer = checkoutButtonModule.createCheckoutHeadlessButtonInitializer({ host: bcStoreHost, storefrontJwtToken });
 }
 
 /**
