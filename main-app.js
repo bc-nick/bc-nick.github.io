@@ -74,7 +74,7 @@ function renderWalletButton(props) {
         return;
     }
 
-    window.checkoutButtonInitializer.initializeButton(paymentProviderInitializationOptions);
+    window.checkoutButtonInitializer.initializeHeadlessButton(paymentProviderInitializationOptions);
 }
 
 /**
@@ -114,7 +114,7 @@ function geBraintreePayPalButtonInitializationOptions(props) {
 
 function getPayPalCommerceButtonInitializationOptions(props) {
     return {
-        methodId: 'paypalcommerce',
+        methodId: 'paypalcommerce.paypal',
         containerId: props.containerId,
         paypalcommerce: {
             ...props.options,
