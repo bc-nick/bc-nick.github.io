@@ -7,6 +7,10 @@ function getBcStoreUrl() {
     return document.getElementById('bc-store-url').value;
 }
 
+function getBcSiteUrl() {
+    return document.getElementById('bc-site-url').value;
+}
+
 function getStorefrontJwtToken() {
     return document.getElementById('bc-storefront-jwt').value;
 }
@@ -53,9 +57,24 @@ async function createCartWithGraphQL(productId) {
             withCredentials: true
         });
 
-        console.log({ cartCreationRequestData: data });
+        const {
+            data: {
+                cart: {
+                    createCart: {
+                        cart
+                    }
+                }
+            },
+            errors,
+        } = data;
 
-        return data.data.cart.createCart.cart;
+        if (errors?.[0]?.message) {
+            alert(errors[0].message);
+
+            return;
+        }
+
+        return cart;
     } catch(error) {
         console.error(error);
 
@@ -65,18 +84,15 @@ async function createCartWithGraphQL(productId) {
 
 
 async function fetchPaymentWalletButtons(cartId) {
-    let paymentMethodsList;
     const bcStoreUrl = getBcStoreUrl();
     const storefrontApiToken = await getStorefrontJwtToken();
-
-    const billingAddressCountry = "US";
 
     const graphQLUrl = `${bcStoreUrl}/graphql`;
 
     const graphQLQuery = `
         query {
             site {
-                paymentWallets(filter: {cartEntityId: "${cartId}", billingCountryCode: "${billingAddressCountry}"}) {
+                paymentWallets(filter: {cartEntityId: "${cartId}"}) {
                     edges {
                         node {
                             entityId
@@ -102,8 +118,6 @@ async function fetchPaymentWalletButtons(cartId) {
             return paymentWalletEdge?.node?.entityId;
         });
 
-        console.log({ paymentMethodsList, data });
-
         return paymentMethodsList;
     } catch(error) {
         console.error(error);
@@ -123,6 +137,16 @@ function getWalletButtonsOption(paymentMethodId, cartId) {
             return {
                 paymentMethodId: paymentMethodId,
                 containerId: 'paypalcommerce-button',
+                options: {
+                    style: { "color":"gold", "label":"checkout" },
+                    cartId,
+                },
+            };
+        }
+        case 'paypalcommerce.paypalcredit': {
+            return {
+                paymentMethodId: paymentMethodId,
+                containerId: 'paypalcommerce-credit-button',
                 options: {
                     style: { "color":"gold", "label":"checkout" },
                     cartId,
@@ -152,6 +176,8 @@ function getWalletButtonsOption(paymentMethodId, cartId) {
 
 async function onRenderWalletButtonsButtonClick() {
     const bcStoreUrl = getBcStoreUrl();
+    const bcSiteUrl = getBcSiteUrl();
+
     const storefrontJwtToken = getStorefrontJwtToken();
     const env = document.getElementById('env-select').value;
 
@@ -163,6 +189,12 @@ async function onRenderWalletButtonsButtonClick() {
 
     if (!bcStoreUrl) {
         console.error('Can\'t render PayPal button because bc store url is not provided');
+
+        return;
+    }
+
+    if (!bcSiteUrl) {
+        console.error('Can\'t render PayPal button because bc site url is not provided');
 
         return;
     }
@@ -192,6 +224,7 @@ async function onRenderWalletButtonsButtonClick() {
 
     await window.BigCommerce.renderWalletButtons({
         bcStoreUrl,
+        bcSiteUrl,
         storefrontJwtToken,
         env,
         walletButtons: walletButtonsOptions,
@@ -204,8 +237,8 @@ async function onRenderWalletButtonsButtonClick() {
  *
  * */
 const button = document.getElementById('render-wallet-buttons');
-button.addEventListener('click', () => {
-    onRenderWalletButtonsButtonClick();
+button.addEventListener('click', async () => {
+    await onRenderWalletButtonsButtonClick();
 });
 
 const buttonCartCreation = document.getElementById('create-cart');

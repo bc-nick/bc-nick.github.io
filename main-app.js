@@ -24,10 +24,10 @@ async function getCheckoutKitLoader(env) {
     return window.checkoutKitLoader;
 }
 
-async function initCheckoutButtonInitializer(bcStoreHost, storefrontJwtToken) {
-    const checkoutButtonModule = await window.checkoutKitLoader.load('checkout-headless-button');
+async function initCheckoutButtonInitializer(bcStoreHost, bcSiteUrl, storefrontJwtToken) {
+    const checkoutButtonModule = await window.checkoutKitLoader.load('headless-checkout-wallet');
 
-    window.checkoutButtonInitializer = checkoutButtonModule.createCheckoutHeadlessButtonInitializer({ host: bcStoreHost, storefrontJwtToken });
+    window.checkoutButtonInitializer = checkoutButtonModule.createHeadlessCheckoutWalletInitializer({ host: bcStoreHost, storefrontJwtToken, siteLink: bcSiteUrl });
 }
 
 /**
@@ -36,7 +36,7 @@ async function initCheckoutButtonInitializer(bcStoreHost, storefrontJwtToken) {
  *
  * */
 async function renderWalletButtons(props) {
-    const { bcStoreUrl, storefrontJwtToken, env, walletButtons } = props;
+    const { bcStoreUrl, bcSiteUrl, storefrontJwtToken, env, walletButtons } = props;
 
     if (walletButtons.length === 0) {
         console.error('Wallet buttons can not be rendered because wallet buttons options did not provided');
@@ -45,7 +45,7 @@ async function renderWalletButtons(props) {
     }
 
     await getCheckoutKitLoader(env);
-    await initCheckoutButtonInitializer(bcStoreUrl, storefrontJwtToken);
+    await initCheckoutButtonInitializer(bcStoreUrl, bcSiteUrl, storefrontJwtToken);
 
     return walletButtons.map(renderWalletButton);
 }
@@ -86,6 +86,7 @@ function getPaymentProviderInitializationOptions(props) {
     const optionsGetter = {
         'braintree.paypal': geBraintreePayPalButtonInitializationOptions,
         'paypalcommerce.paypal': getPayPalCommerceButtonInitializationOptions,
+        'paypalcommerce.paypalcredit': getPayPalCommerceCreditButtonInitializationOptions,
     };
 
     const paymentProviderInitializationOptionsGetter = optionsGetter[props.paymentMethodId];
@@ -114,9 +115,19 @@ function geBraintreePayPalButtonInitializationOptions(props) {
 
 function getPayPalCommerceButtonInitializationOptions(props) {
     return {
-        methodId: 'paypalcommerce.paypal',
+        methodId: 'paypalcommerce',
         containerId: props.containerId,
         paypalcommerce: {
+            ...props.options,
+        },
+    };
+}
+
+function getPayPalCommerceCreditButtonInitializationOptions(props) {
+    return {
+        methodId: 'paypalcommercecredit',
+        containerId: props.containerId,
+        paypalcommercecredit: {
             ...props.options,
         },
     };
