@@ -75,7 +75,7 @@ async function createCartWithGraphQL(productId) {
             return;
         }
 
-        setCookie('cartId', cart.entityId, 30);
+        setCookie('cartId', cart.entityId, { secure: true, httpOnly: true });
 
         return cart;
     } catch(error) {
@@ -268,12 +268,26 @@ function generateWalletButtonsContainers(walletButtonsContainers) {
     })
 }
 
-function setCookie(cName, cValue, expDays) {
-    let date = new Date();
+function setCookie(name, value, attributes = {}) {
 
-    date.setTime(date.getTime() + (expDays * 24 * 60 * 60 * 1000));
+    attributes = {
+        path: '/',
+        ...attributes
+    };
 
-    const expires = 'expires=' + date.toUTCString();
+    if (attributes.expires instanceof Date) {
+        attributes.expires = attributes.expires.toUTCString();
+    }
 
-    document.cookie = cName + '=' + cValue + '; ' + expires + '; path=/; secure=true; httpOnly=false; samesite=lax';
+    let updatedCookie = encodeURIComponent(name) + "=" + encodeURIComponent(value);
+
+    for (let attributeKey in attributes) {
+        updatedCookie += "; " + attributeKey;
+        let attributeValue = attributes[attributeKey];
+        if (attributeValue !== true) {
+            updatedCookie += "=" + attributeValue;
+        }
+    }
+
+    document.cookie = updatedCookie;
 }
