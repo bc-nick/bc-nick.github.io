@@ -61,9 +61,7 @@ async function createCartWithGraphQL(productId) {
         const {
             data: {
                 cart: {
-                    createCart: {
-                        cart
-                    }
+                    createCart
                 }
             },
             errors,
@@ -75,9 +73,9 @@ async function createCartWithGraphQL(productId) {
             return;
         }
 
-        setCookie('cartId', cart.entityId, { secure: true, httpOnly: true });
+        setCookie('cartId', createCart.cart.entityId, { secure: true, httpOnly: true });
 
-        return cart;
+        return createCart.cart;
     } catch(error) {
         console.error(error);
 
