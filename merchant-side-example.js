@@ -53,6 +53,7 @@ async function createCartWithGraphQL(productId) {
             headers: {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${storefrontApiToken}`,
+                // do we need X-Bc-Customer-Id ???
             },
             withCredentials: true
         });
@@ -73,6 +74,8 @@ async function createCartWithGraphQL(productId) {
 
             return;
         }
+
+        setCookie('cartId', cart.entityId, 30);
 
         return cart;
     } catch(error) {
@@ -263,4 +266,14 @@ function generateWalletButtonsContainers(walletButtonsContainers) {
 
         mainContainer.appendChild(div);
     })
+}
+
+function setCookie(cName, cValue, expDays) {
+    let date = new Date();
+
+    date.setTime(date.getTime() + (expDays * 24 * 60 * 60 * 1000));
+
+    const expires = 'expires=' + date.toUTCString();
+
+    document.cookie = cName + '=' + cValue + '; ' + expires + '; path=/; secure=true; httpOnly=false; samesite=lax';
 }
