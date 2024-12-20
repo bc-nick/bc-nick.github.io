@@ -73,7 +73,7 @@ async function createCartWithGraphQL(productId) {
             return;
         }
 
-        setCookie('cartId', createCart.cart.entityId, { secure: false, sameSite: 'lax', domain: 'store-inb6w0whmw.my-integration.zone' });
+        setCookie('cartId', createCart.cart.entityId, { secure: false, sameSite: 'none' });
 
         return createCart.cart;
     } catch(error) {
@@ -202,7 +202,7 @@ async function onRenderWalletButtonsButtonClick() {
 
     let cartEntityId = await getCartId();
 
-    setCookie('cartId', cartEntityId, { secure: false, sameSite: 'lax', domain: 'store-inb6w0whmw.my-integration.zone' });
+    setCookie('cartId', cartEntityId, { secure: false, sameSite: 'none' });
 
     if (!cartEntityId) {
         console.error('Can\'t render PayPal button because cart id is not provided');
