@@ -73,7 +73,7 @@ async function createCartWithGraphQL(productId) {
             return;
         }
 
-        setCookie('cartId', createCart.cart.entityId, { secure: false, sameSite: 'none' });
+        setCookie('cartId', createCart.cart.entityId, { secure: false, sameSite: 'none', crossDomain: true });
 
         return createCart.cart;
     } catch(error) {
@@ -202,7 +202,7 @@ async function onRenderWalletButtonsButtonClick() {
 
     let cartEntityId = await getCartId();
 
-    setCookie('cartId', cartEntityId, { secure: false, sameSite: 'none' });
+    setCookie('cartId', cartEntityId, { secure: false, sameSite: 'none', crossDomain: true });
 
     if (!cartEntityId) {
         console.error('Can\'t render PayPal button because cart id is not provided');
