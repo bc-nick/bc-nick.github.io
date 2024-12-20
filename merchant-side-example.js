@@ -202,7 +202,7 @@ async function onRenderWalletButtonsButtonClick() {
 
     let cartEntityId = await getCartId();
 
-    setCookie('cartId', cartEntityId, { secure: false, sameSite: 'none', crossDomain: true });
+    // setCookie('cartId', cartEntityId, { secure: false, sameSite: 'none', crossDomain: true });
 
     if (!cartEntityId) {
         console.error('Can\'t render PayPal button because cart id is not provided');
