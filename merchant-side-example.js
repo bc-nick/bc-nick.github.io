@@ -47,7 +47,7 @@ async function createCartWithGraphQL(productId) {
     `;
 
     try {
-        const { data } = await window.axios.post(graphQLUrl, {
+        const { data, headers } = await window.axios.post(graphQLUrl, {
             query: graphQLMutation,
         }, {
             headers: {
@@ -57,6 +57,8 @@ async function createCartWithGraphQL(productId) {
             },
             withCredentials: true
         });
+
+        console.log(headers);
 
         const {
             data: {
@@ -105,7 +107,7 @@ async function fetchPaymentWalletButtons(cartId) {
     `;
 
     try {
-        const { data } = await window.axios.post(graphQLUrl, {
+        const { data, headers } = await window.axios.post(graphQLUrl, {
             query: graphQLQuery,
         }, {
             headers: {
@@ -114,6 +116,8 @@ async function fetchPaymentWalletButtons(cartId) {
             },
             withCredentials: true
         });
+
+        console.log(headers);
 
         const paymentMethodsList = data.data?.site?.paymentWallets?.edges?.map(paymentWalletEdge => {
             return paymentWalletEdge?.node?.entityId;
