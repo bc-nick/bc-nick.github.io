@@ -10,7 +10,7 @@ async function getCheckoutKitLoader(env) {
             script.type = 'text/javascript';
             script.defer = true;
             script.src = env === 'local'
-                ? `${window.location.origin}/v1/loader.js`
+                ? `https://bc-nick.github.io/v1/loader.js`
                 : env === 'int'
                     ? 'https://checkout-sdk.integration.zone/v1/loader.js'
                     : 'https://checkout-sdk.bigcommerce.com/v1/loader.js';
