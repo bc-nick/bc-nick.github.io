@@ -97,6 +97,7 @@ function getPaymentProviderInitializationOptions(props) {
 }
 
 function getBCPGooglePayButtonInitializationOptions(props) {
+
     return {
         methodId: 'bigcommerce_paymentsgooglepay',
         containerId: props.containerId,
