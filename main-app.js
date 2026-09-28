@@ -74,7 +74,7 @@ function renderWalletButton(props) {
         return;
     }
 
-    window.checkoutButtonInitializer.initializeHeadlessButton(paymentProviderInitializationOptions);
+    window.checkoutButtonInitializer.initializeWalletButton(paymentProviderInitializationOptions);
 }
 
 /**

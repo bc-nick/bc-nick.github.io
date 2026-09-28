@@ -36,6 +36,22 @@ async function createCartWithGraphQL(productId) {
                 createCart(input: {lineItems: {quantity: 1, productEntityId: ${productId}}}) {
                     cart {
                         entityId
+                        amount {
+                          value
+                          currencyCode
+                        }
+                        lineItems {
+                          physicalItems {
+                            entityId
+                            name
+                            quantity
+                          }
+                          digitalItems {
+                            entityId
+                            name
+                            quantity
+                          }
+                        }
                     }
                 }
             }
@@ -71,10 +87,130 @@ async function createCartWithGraphQL(productId) {
             return;
         }
 
-        // setCookie('cartId', createCart.cart.entityId, { secure: false, sameSite: 'none', crossDomain: true });
-        window.localStorage.setItem('cartInfo', createCart.cart);
+        window.localStorage.setItem('cartInfo', JSON.stringify(createCart.cart));
 
         return createCart.cart;
+    } catch(error) {
+        console.error(error);
+
+        return {};
+    }
+}
+
+async function getCartWithGraphQL(cartId) {
+    const bcStoreUrl = getBcStoreUrl();
+    const storefrontApiToken = await getStorefrontJwtToken();
+
+    const graphQLUrl = `${bcStoreUrl}/graphql`;
+    const graphQLMutation = `
+      query {
+        site {
+          cart(entityId: "${cartId}") {
+            entityId
+            currencyCode
+            amount {
+              value
+              currencyCode
+            }
+            lineItems {
+              physicalItems {
+                entityId
+                name
+                quantity
+              }
+            }
+          }
+        }
+      }
+    `;;
+
+    try {
+        const { data } = await window.axios.post(graphQLUrl, {
+            query: graphQLMutation,
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${storefrontApiToken}`,
+                // do we need X-Bc-Customer-Id ???
+            },
+            withCredentials: true
+        });
+
+        const {
+            data: {
+                site: {
+                    cart
+                }
+            },
+            errors,
+        } = data;
+
+        if (errors?.[0]?.message) {
+            alert(errors[0].message);
+
+            return;
+        }
+
+        window.localStorage.setItem('cartInfo', JSON.stringify(cart));
+
+        return cart;
+    } catch(error) {
+        console.error(error);
+
+        return {};
+    }
+}
+
+async function removeCartWithGraphQL(cartId) {
+    const bcStoreUrl = getBcStoreUrl();
+    const storefrontApiToken = await getStorefrontJwtToken();
+
+    const graphQLUrl = `${bcStoreUrl}/graphql`;
+    const graphQLMutation = `
+        mutation {
+            cart {
+                deleteCart(input: { cartEntityId: "${cartId}" }) {
+                    deletedCartEntityId
+                }
+            }
+        }
+    `;
+
+    try {
+        const { data } = await window.axios.post(graphQLUrl, {
+            query: graphQLMutation,
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${storefrontApiToken}`,
+                // do we need X-Bc-Customer-Id ???
+            },
+            withCredentials: true
+        });
+
+        const {
+            data: {
+                cart: {
+                    deleteCart: {
+                        deletedCartEntityId
+                    }
+                }
+            },
+            errors,
+        } = data;
+
+        if (errors?.[0]?.message) {
+            alert(errors[0].message);
+
+            return;
+        }
+
+        alert(`Cart deleted successfully (cartId: ${deletedCartEntityId})`);
+
+        window.localStorage.removeItem('cartInfo');
+        document.getElementById('cart-id-input').value = '';
+
+        return deletedCartEntityId;
     } catch(error) {
         console.error(error);
 
@@ -135,11 +271,11 @@ async function fetchPaymentWalletButtons(cartId) {
  */
 async function getWalletButtonsOption(paymentMethodId, cartId) {
     switch (paymentMethodId) {
-        case 'bigcommerce.paymentsgooglepay': {
-            const data = await getPaymentWalletWithInitialisationOptions(paymentMethodId);
+        case 'bigcommerce_payments.googlepay': {
+            const data = await getPaymentWalletWithInitialisationOptions(paymentMethodId, cartId);
 
             return {
-                paymentMethodId: paymentMethodId,
+                paymentMethodId: 'bigcommerce.paymentsgooglepay',
                 containerId: 'bigcommerce-payments-gp-button',
                 options: {
                     cartId,
@@ -150,7 +286,9 @@ async function getWalletButtonsOption(paymentMethodId, cartId) {
             };
         }
         default:
-            return {};
+            return {
+                paymentMethodId: 'default-payment-method',
+            };
     }
 }
 
@@ -164,7 +302,7 @@ async function getPaymentWalletWithInitialisationOptions(entityId, cartId) {
   query {
     site {
       paymentWalletWithInitializationData(
-        filter: { paymentWalletEntityId: ${entityId}, cartEntityId: ${cartId} }
+        filter: { paymentWalletEntityId: "${entityId}", cartEntityId: "${cartId}" }
       ) {
         clientToken
         initializationData
@@ -226,9 +364,9 @@ async function onRenderWalletButtonsButtonClick() {
 
     let paymentWalletsList = await fetchPaymentWalletButtons(cartEntityId);
 
-    const walletButtonsOptions = paymentWalletsList.map((paymentMethodId) => {
-        const walletButtonsOption = getWalletButtonsOption(paymentMethodId, cartEntityId);
+    const paymentButtonOptions = await Promise.all(paymentWalletsList.map((paymentMethodId) => getWalletButtonsOption(paymentMethodId, cartEntityId)));
 
+    const walletButtonsOptions = paymentButtonOptions.map((walletButtonsOption) => {
         return {
             ...walletButtonsOption,
             options: {
@@ -256,12 +394,26 @@ button.addEventListener('click', async () => {
     await onRenderWalletButtonsButtonClick();
 });
 
+const buttonCart = document.getElementById('get-cart');
+buttonCart.addEventListener('click', () => {
+    const cartValue = document.getElementById('cart-id-input').value;
+
+    getCartWithGraphQL(cartValue);
+});
+
 const buttonCartCreation = document.getElementById('create-cart');
 buttonCartCreation.addEventListener('click', () => {
     const productId = getProductId();
     createCartWithGraphQL(productId).then((cart) => {
         document.getElementById('cart-id-input').value = cart.entityId;
     });
+});
+
+const buttonCartRemoval = document.getElementById('remove-cart');
+buttonCartRemoval.addEventListener('click', () => {
+    const cartValue = document.getElementById('cart-id-input').value;
+
+    removeCartWithGraphQL(cartValue);
 });
 
 /**

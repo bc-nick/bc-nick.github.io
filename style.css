@@ -12,6 +12,10 @@ body.use-api .api-related {
     display: block;
 }
 
+.input-data.button-block {
+    display: inline-block;
+}
+
 .content {
     display: grid;
     grid-column-gap: 60px;
