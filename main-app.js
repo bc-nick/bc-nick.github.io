@@ -24,10 +24,10 @@ async function getCheckoutKitLoader(env) {
     return window.checkoutKitLoader;
 }
 
-async function initCheckoutButtonInitializer(bcStoreHost, bcSiteUrl, storefrontJwtToken) {
-    const checkoutButtonModule = await window.checkoutKitLoader.load('headless-checkout-wallet');
+async function initCheckoutButtonInitializer(bcStoreHost) {
+    const checkoutButtonModule = await window.checkoutKitLoader.load('wallet-button');
 
-    window.checkoutButtonInitializer = checkoutButtonModule.createHeadlessCheckoutWalletInitializer({ host: bcStoreHost, storefrontJwtToken, siteLink: bcSiteUrl });
+    window.checkoutButtonInitializer = checkoutButtonModule.createWalletButtonInitializer({ graphQLEndpoint: bcStoreHost });
 }
 
 /**
@@ -36,7 +36,7 @@ async function initCheckoutButtonInitializer(bcStoreHost, bcSiteUrl, storefrontJ
  *
  * */
 async function renderWalletButtons(props) {
-    const { bcStoreUrl, bcSiteUrl, storefrontJwtToken, env, walletButtons } = props;
+    const { bcStoreUrl, env, walletButtons } = props;
 
     if (walletButtons.length === 0) {
         console.error('Wallet buttons can not be rendered because wallet buttons options did not provided');
@@ -45,7 +45,7 @@ async function renderWalletButtons(props) {
     }
 
     await getCheckoutKitLoader(env);
-    await initCheckoutButtonInitializer(bcStoreUrl, bcSiteUrl, storefrontJwtToken);
+    await initCheckoutButtonInitializer(bcStoreUrl);
 
     return walletButtons.map(renderWalletButton);
 }
@@ -84,9 +84,7 @@ function renderWalletButton(props) {
  * */
 function getPaymentProviderInitializationOptions(props) {
     const optionsGetter = {
-        'braintree.paypal': geBraintreePayPalButtonInitializationOptions,
-        'paypalcommerce.paypal': getPayPalCommerceButtonInitializationOptions,
-        'paypalcommerce.paypalcredit': getPayPalCommerceCreditButtonInitializationOptions,
+        'bigcommerce.paymentsgooglepay': getBCPGooglePayButtonInitializationOptions,
     };
 
     const paymentProviderInitializationOptionsGetter = optionsGetter[props.paymentMethodId];
@@ -98,36 +96,11 @@ function getPaymentProviderInitializationOptions(props) {
     return paymentProviderInitializationOptionsGetter(props);
 }
 
-/**
- *
- * Provider specific button rendering methods
- *
- * */
-function geBraintreePayPalButtonInitializationOptions(props) {
+function getBCPGooglePayButtonInitializationOptions(props) {
     return {
-        methodId: 'braintreepaypal',
+        methodId: 'bigcommerce_paymentsgooglepay',
         containerId: props.containerId,
-        braintreepaypal: {
-            ...props.options,
-        },
-    }
-}
-
-function getPayPalCommerceButtonInitializationOptions(props) {
-    return {
-        methodId: 'paypalcommerce',
-        containerId: props.containerId,
-        paypalcommerce: {
-            ...props.options,
-        },
-    };
-}
-
-function getPayPalCommerceCreditButtonInitializationOptions(props) {
-    return {
-        methodId: 'paypalcommercecredit',
-        containerId: props.containerId,
-        paypalcommercecredit: {
+        bigcommerce_paymentsgooglepay: {
             ...props.options,
         },
     };

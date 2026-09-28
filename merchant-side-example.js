@@ -7,10 +7,6 @@ function getBcStoreUrl() {
     return document.getElementById('bc-store-url').value;
 }
 
-function getBcSiteUrl() {
-    return document.getElementById('bc-site-url').value;
-}
-
 function getStorefrontJwtToken() {
     return document.getElementById('bc-storefront-jwt').value;
 }
@@ -75,7 +71,8 @@ async function createCartWithGraphQL(productId) {
             return;
         }
 
-        setCookie('cartId', createCart.cart.entityId, { secure: false, sameSite: 'none', crossDomain: true });
+        // setCookie('cartId', createCart.cart.entityId, { secure: false, sameSite: 'none', crossDomain: true });
+        window.localStorage.setItem('cartInfo', createCart.cart);
 
         return createCart.cart;
     } catch(error) {
@@ -136,40 +133,60 @@ async function fetchPaymentWalletButtons(cartId) {
  * Options mapper
  *
  */
-function getWalletButtonsOption(paymentMethodId, cartId) {
+async function getWalletButtonsOption(paymentMethodId, cartId) {
     switch (paymentMethodId) {
-        case 'paypalcommerce.paypal': {
+        case 'bigcommerce.paymentsgooglepay': {
+            const data = await getPaymentWalletWithInitialisationOptions(paymentMethodId);
+
             return {
                 paymentMethodId: paymentMethodId,
-                containerId: 'paypalcommerce-button',
+                containerId: 'bigcommerce-payments-gp-button',
                 options: {
-                    style: { "color":"gold", "label":"checkout" },
                     cartId,
-                },
-            };
-        }
-        case 'paypalcommerce.paypalcredit': {
-            return {
-                paymentMethodId: paymentMethodId,
-                containerId: 'paypalcommerce-credit-button',
-                options: {
-                    style: { "color":"gold", "label":"checkout" },
-                    cartId,
-                },
-            };
-        }
-        case 'braintree.paypal': {
-            return {
-                paymentMethodId: paymentMethodId,
-                containerId: 'braintree-paypal-button',
-                options: {
-                    style: { "color":"gold", "label":"checkout" },
-                    cartId,
+                    amount: JSON.parse(window.localStorage.getItem('cartInfo')).amount,
+                    currency: { code: 'USD', decimalPlaces: 2 },
+                    ...data,
                 },
             };
         }
         default:
             return {};
+    }
+}
+
+async function getPaymentWalletWithInitialisationOptions(entityId, cartId) {
+    const bcStoreUrl = getBcStoreUrl();
+    const storefrontApiToken = await getStorefrontJwtToken();
+
+    const graphQLUrl = `${bcStoreUrl}/graphql`;
+
+    const graphQLQuery = `
+  query {
+    site {
+      paymentWalletWithInitializationData(
+        filter: { paymentWalletEntityId: ${entityId}, cartEntityId: ${cartId} }
+      ) {
+        clientToken
+        initializationData
+      }
+    }
+  }
+`;
+
+    try {
+        const { data } = await window.axios.post(graphQLUrl, {
+            query: graphQLQuery,
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${storefrontApiToken}`,
+            },
+            withCredentials: true
+        });
+
+        return data.data.site.paymentWalletWithInitializationData;
+    } catch (error) {
+        console.log(error);
     }
 }
 
@@ -181,7 +198,6 @@ function getWalletButtonsOption(paymentMethodId, cartId) {
 
 async function onRenderWalletButtonsButtonClick() {
     const bcStoreUrl = getBcStoreUrl();
-    const bcSiteUrl = getBcSiteUrl();
 
     const storefrontJwtToken = getStorefrontJwtToken();
     const env = document.getElementById('env-select').value;
@@ -194,12 +210,6 @@ async function onRenderWalletButtonsButtonClick() {
 
     if (!bcStoreUrl) {
         console.error('Can\'t render PayPal button because bc store url is not provided');
-
-        return;
-    }
-
-    if (!bcSiteUrl) {
-        console.error('Can\'t render PayPal button because bc site url is not provided');
 
         return;
     }
@@ -231,8 +241,6 @@ async function onRenderWalletButtonsButtonClick() {
 
     await window.BigCommerce.renderWalletButtons({
         bcStoreUrl,
-        bcSiteUrl,
-        storefrontJwtToken,
         env,
         walletButtons: walletButtonsOptions,
     });
@@ -270,28 +278,4 @@ function generateWalletButtonsContainers(walletButtonsContainers) {
 
         mainContainer.appendChild(div);
     })
-}
-
-function setCookie(name, value, attributes = {}) {
-
-    attributes = {
-        path: '/',
-        ...attributes
-    };
-
-    if (attributes.expires instanceof Date) {
-        attributes.expires = attributes.expires.toUTCString();
-    }
-
-    let updatedCookie = encodeURIComponent(name) + "=" + encodeURIComponent(value);
-
-    for (let attributeKey in attributes) {
-        updatedCookie += "; " + attributeKey;
-        let attributeValue = attributes[attributeKey];
-        if (attributeValue !== true) {
-            updatedCookie += "=" + attributeValue;
-        }
-    }
-
-    document.cookie = updatedCookie;
 }
