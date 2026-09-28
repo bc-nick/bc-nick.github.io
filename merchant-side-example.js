@@ -279,7 +279,7 @@ async function getWalletButtonsOption(paymentMethodId, cartId) {
                 containerId: 'bigcommerce-payments-gp-button',
                 options: {
                     cartId,
-                    amount: JSON.parse(window.localStorage.getItem('cartInfo')).amount,
+                    amount: JSON.parse(window.localStorage.getItem('cartInfo')).amount.value,
                     currency: { code: 'USD', decimalPlaces: 2 },
                     ...data,
                 },
