@@ -24,10 +24,10 @@ async function getCheckoutKitLoader(env) {
     return window.checkoutKitLoader;
 }
 
-async function initCheckoutButtonInitializer(bcStoreHost) {
+async function initCheckoutButtonInitializer() {
     const checkoutButtonModule = await window.checkoutKitLoader.load('wallet-button');
 
-    window.checkoutButtonInitializer = checkoutButtonModule.createWalletButtonInitializer({ graphQLEndpoint: bcStoreHost });
+    window.checkoutButtonInitializer = checkoutButtonModule.createWalletButtonInitializer({ graphQLEndpoint: 'graphql' });
 }
 
 /**
@@ -36,7 +36,7 @@ async function initCheckoutButtonInitializer(bcStoreHost) {
  *
  * */
 async function renderWalletButtons(props) {
-    const { bcStoreUrl, env, walletButtons } = props;
+    const { env, walletButtons } = props;
 
     if (walletButtons.length === 0) {
         console.error('Wallet buttons can not be rendered because wallet buttons options did not provided');
@@ -45,7 +45,7 @@ async function renderWalletButtons(props) {
     }
 
     await getCheckoutKitLoader(env);
-    await initCheckoutButtonInitializer(bcStoreUrl);
+    await initCheckoutButtonInitializer();
 
     return walletButtons.map(renderWalletButton);
 }
